@@ -1,0 +1,8 @@
+__pycache__
+.DS_Store
+aetros-cli-data
+venv
+exmp
+data
+
+regression

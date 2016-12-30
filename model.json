@@ -1,0 +1,116 @@
+{
+    "class_name": "Sequential",
+    "config": [{
+        "class_name": "LSTM",
+        "config": {
+            "init": "glorot_uniform",
+            "dropout_U": 0.0,
+            "U_regularizer": null,
+            "name": "lstm_1",
+            "activation": "tanh",
+            "output_dim": 20,
+            "forget_bias_init": "one",
+            "trainable": true,
+            "stateful": true,
+            "go_backwards": false,
+            "b_regularizer": null,
+            "W_regularizer": null,
+            "return_sequences": true,
+            "consume_less": "cpu",
+            "unroll": false,
+            "inner_init": "orthogonal",
+            "input_dtype": "float32",
+            "inner_activation": "hard_sigmoid",
+            "batch_input_shape": [1, 1, 20],
+            "dropout_W": 0.0
+        }
+    }, {
+        "class_name": "LSTM",
+        "config": {
+            "init": "glorot_uniform",
+            "dropout_U": 0.0,
+            "U_regularizer": null,
+            "name": "lstm_2",
+            "activation": "tanh",
+            "output_dim": 20,
+            "forget_bias_init": "one",
+            "trainable": true,
+            "stateful": true,
+            "go_backwards": false,
+            "b_regularizer": null,
+            "W_regularizer": null,
+            "return_sequences": false,
+            "consume_less": "cpu",
+            "unroll": false,
+            "inner_init": "orthogonal",
+            "inner_activation": "hard_sigmoid",
+            "batch_input_shape": [1, 1, 20],
+            "dropout_W": 0.0
+        }
+    }, {
+        "class_name": "Dense",
+        "config": {
+            "W_constraint": null,
+            "init": "glorot_uniform",
+            "bias": true,
+            "activity_regularizer": null,
+            "name": "dense_1",
+            "b_constraint": null,
+            "activation": "tanh",
+            "output_dim": 16,
+            "W_regularizer": null,
+            "trainable": true,
+            "input_dim": null,
+            "b_regularizer": null
+        }
+    }, {
+        "class_name": "Dense",
+        "config": {
+            "W_constraint": null,
+            "init": "glorot_uniform",
+            "bias": true,
+            "activity_regularizer": null,
+            "name": "dense_2",
+            "b_constraint": null,
+            "activation": "tanh",
+            "output_dim": 12,
+            "W_regularizer": null,
+            "trainable": true,
+            "input_dim": null,
+            "b_regularizer": null
+        }
+    }, {
+        "class_name": "Dense",
+        "config": {
+            "W_constraint": null,
+            "init": "glorot_uniform",
+            "bias": true,
+            "activity_regularizer": null,
+            "name": "dense_3",
+            "b_constraint": null,
+            "activation": "tanh",
+            "output_dim": 8,
+            "W_regularizer": null,
+            "trainable": true,
+            "input_dim": null,
+            "b_regularizer": null
+        }
+    }, {
+        "class_name": "Dense",
+        "config": {
+            "W_constraint": null,
+            "init": "glorot_uniform",
+            "bias": true,
+            "activity_regularizer": null,
+            "name": "dense_4",
+            "b_constraint": null,
+            "activation": "linear",
+            "output_dim": 1,
+            "W_regularizer": null,
+            "trainable": true,
+            "input_dim": null,
+            "b_regularizer": null
+        }
+    }],
+    "keras_version": "1.1.2"
+}
