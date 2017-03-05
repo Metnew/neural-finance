@@ -1,173 +1,209 @@
-import json
-from flask import request, jsonify, g
 import flask_restful as restful
 from server import mongo
-from datetime import timedelta, datetime
+from datetime import datetime
 import numpy as np
 import time
+import math
+
 
 class Neural_Data(restful.Resource):
+    # divide our finance collections in train, test datasets
+    # Train = 70 %
+    # Test = 30%
+
     def get(self):
-        finance_data = mongo.db.finance_data
-        neural_data = []
-        neural_data_mongo = mongo.db.neural_data
-        max_log_return = -1
-        min_log_return = 111111111
-        maximum = 0
-        minimum = 0
-        start_date = 1468920744
-        std = []
-        time_sec = []
-        time_hour = []
-        time_minute = []
-        time_unix = []
-        last_average = 1
-        average_prices = []
-        last_close = 1
-        pseudo_log_return_arr = []
-        log_return_arr = []
-        stringed_time = []
-        price_growth_arr = []
-        unix_now = time.time()
-        # selected data
-        # for i in range(0, 30000):
-        print('START NORMALIZE DATA')
-        data = finance_data.find({"timestamp": {"$lte": int(unix_now)}}).limit(50000)
-        # useless code for timestamp normalization
-        # for minute in data:
-        #     start_date = minute["timestamp"]
-        #     end = start_date % 10
-        #     if end > 4 :
-        #         end = 10 - end
-        #     else:
-        #         end -= end
-        # finance_data.update({}, {"$inc":{"timestamp":end}})
-        # data = finance_data.find({"timestamp": {"$gt": int(start_date)}}).limit(30000)
-            # prev_index_1 = i - 1
-            # prev_index_2 = i - 2
-            # prev_index_3 = i - 3
-            # prev_index_4 = i - 4
-            # prev_index_5 = i - 5
-            # prev_index_6 = i - 6
-            # min_max_scaler = preprocessing.MinMaxScaler()
-            # current_price = close_price[i]
-            # prev_price_1 = get_price()minute[prev_index_1]
-            # prev_price_2 = close_price[prev_index_2]
-            # prev_price_3 = close_price[prev_index_3]
-            # prev_price_4 = close_price[prev_index_4]
-            # prev_price_5 = close_price[prev_index_5]
-            # prev_price_6 = close_price[prev_index_6]
-            #
-            # arr_current_minute = np.array(
-            #     [open_price[i], close_price[i], high_price[i], low_price[i]])
-            # arr_last_minute_1 = np.array([open_price[prev_index_1], close_price[
-            #                              prev_index_1], high_price[prev_index_1], low_price[prev_index_1]])
-            # arr_last_minute_2 = np.array([open_price[prev_index_2], close_price[
-            #                              prev_index_2], high_price[prev_index_2], low_price[prev_index_2]])
-            # arr_last_minute_3 = np.array([open_price[prev_index_3], close_price[
-            #                              prev_index_3], high_price[prev_index_3], low_price[prev_index_3]])
-            # arr_last_minute_4 = np.array([open_price[prev_index_4], close_price[
-            #                              prev_index_4], high_price[prev_index_4], low_price[prev_index_4]])
-            # arr_last_minute_5 = np.array([open_price[prev_index_5], close_price[
-            #                              prev_index_5], high_price[prev_index_5], low_price[prev_index_5]])
-            # arr_last_minute_6 = np.array([open_price[prev_index_6], close_price[
-            #                              prev_index_6], high_price[prev_index_6], low_price[prev_index_6]])
-        # regr = linear_model.LinearRegression()
-        for x in data:
-            minute = x
 
-            # print(minute)
-            open_price = minute["open_price"]
-            close_price = minute["close_price"]
-            low_price = minute["low_price"]
-            high_price = minute["high_price"]
-            start_date = minute["timestamp"]
-            prices = np.array([open_price, low_price, close_price, high_price])
-            # last_close = close_price
-            average = np.average(prices)
-            average_prices.append(average)
-
-            local_time = datetime.fromtimestamp(start_date)
-            # stringed_time.append(local_time.strftime('%Y-%m-%d %H:%M:%S'))
-            time_unix.append(start_date)
-            time_sec.append(int(local_time.strftime("%S")))
-            time_minute.append(int(local_time.strftime("%M")))
-            time_hour.append(int(local_time.strftime("%H")) - 13)
-
-            # print(len(range(0, len(average_prices) )))
-            # print(len(average_prices))
-            # regr.fit(np.array(range(0, len(average_prices) + 1)).reshape(len(average_prices), 1), np.array(average_prices).reshape(len(average_prices) , 1))
-            # print(regr.coef_)
-            if close_price - last_close > 0 :
-                price_growth = 1
-            elif close_price - last_close < 0 :
-                price_growth = 0
-            price_growth_arr.append(price_growth)
-            pseudo_log_return = np.log(average / last_average)
-            pseudo_log_return_arr.append(pseudo_log_return)
-
-            log_return = np.log(close_price / last_close)
-            log_return_arr.append(log_return)
-
-            # dates = pd.date_range(stringed_time[0], stringed_time[-1], freq="m")
-            # AO = pd.Series(data=log_return_arr, index = dates)
-            # z = AO.reset_index()
-            # try:
-            #     model = pd.ols(x=pd.to_datetime(z["index"]).dt.minute, y=z[0])
-            #     print(model)
-            # except Exception as e:
-            #     print(e)
-            last_average = average
-            last_close = close_price
-            neural_data.append(average)
-            std.append(np.std(prices))
-                # normalized_average = normalize_price(average)
-            # neural_minute = {
-            #     'timestamp': timestamp,
-            #     'sec': time_sec,
-            #     'minute': time_minute,
-            #     'hour': time_hour,
-            #     'std': std,
-            #     'log_return':
-            # }
-            # neural_data.insert_one({}, neural_minute)
-        neural_data = np.array(neural_data)
-        neural_data = reject_outliers(neural_data)
-        neural_data_mean = np.average(neural_data)
-        neural_data_std = np.std(neural_data)
-
-        index_in_norm_arr = 0
-
-        neural_data_mongo.remove()
-        for i, value in np.ndenumerate(neural_data):
-            # print(value)
-            # if minimum > value:
-            #     minimum = value
-            # if maximum < value:
-            #     maximum = value
-            value = normalize_price(value, neural_data_mean, neural_data_std)
-            minute = {
-                "z_score": value,
-                "std": std[index_in_norm_arr],
-                'sec': time_sec[index_in_norm_arr],
-                'minute': time_minute[index_in_norm_arr],
-                'hour': time_hour[index_in_norm_arr],
-                'timestamp': time_unix[index_in_norm_arr],
-                'pseudo_log_return': pseudo_log_return_arr[index_in_norm_arr],
-                'log_return': log_return_arr[index_in_norm_arr],
-                'price_growth': price_growth_arr[index_in_norm_arr]
-
-            }
-            index_in_norm_arr += 1
-            neural_data_mongo.insert_one(minute)
-        print("DATA NORMALIZED in {} seconds".format(time.time() - unix_now))
+        normalize_data_for_NN('GSPC')
+        normalize_data_for_NN('DJI')
         return "DATA STORED!"
 
 
-# def normalize_price(price, minimum, maximum):
-def normalize_price(value, mean, std):
-    # return ((2*price - (maximum + minimum)) / (maximum - minimum))
-    return (value - mean) / std
+def z_score(value, obj):
+    return (value - obj["mean"]) / obj["std"]
 
-def reject_outliers(data, m=2):
-    return data[abs(data - np.mean(data)) < m * np.std(data)]
+def min_max(x_np):
+    return (x_np - x_np.min()) / (x_np.max() - x_np.min())
+
+def normalize_data_for_NN(index_name):
+    unix_now = time.time()  # time right now
+    print('NORMALIZING DATA...')
+    # Get ALL finance data for this index_name
+
+    mean_stat, last_time = make_dataset(index_name, True)
+    make_dataset(index_name, False, last_time, mean_stat)
+    print("DATA NORMALIZED in {} seconds".format(time.time() - unix_now))
+
+
+def make_dataset(index_name, train = False, last_data_timestamp = 1, mean_statistics = None):
+
+    finance_data = mongo.db["finance_data_" + index_name]
+    if train:
+        collection = mongo.db["neural_train_data_" + index_name]
+    else:
+        collection = mongo.db["neural_test_data_" + index_name]
+    collection.remove()  # remove past data from collection
+
+
+    dataset_size = finance_data.find({}).count()
+    if train:
+        dataset_size = math.floor(dataset_size * 0.7)
+    else:
+        dataset_size = math.ceil(dataset_size * 0.3)
+
+    std_arr = np.zeros(dataset_size)  # std of prices on every minute
+    time_sec = np.zeros(dataset_size)  # prices :ss on every minute
+    time_hour = np.zeros(dataset_size)  # prices :HH on every minute
+    time_minute = np.zeros(dataset_size)  # prices :MM on every minute
+    time_unix = np.zeros(dataset_size)  # timestamp of every minute
+    average_price_arr = np.zeros(dataset_size)  # average_price of every minute
+    close_price_arr = np.zeros(dataset_size)  # average_price of every minute
+    # last_data_timestamp = 1  # for DB queries, look at "data" variable
+    last_average = 1  # last average price defined outside the loop scope
+    last_close = 1  # last close price defined outside the loop scope
+    log_return_arr = np.zeros(dataset_size)  # logarithmic difference of close prices of every consecutive minutes
+    # same as log_return, but average price instead of close_price
+    pseudo_log_return_arr = np.zeros(dataset_size)
+    # price_growth_arr = []  # more about "price_growth" below
+    price_growth_percent_arr = np.zeros(dataset_size)  # more about "price_growth_percent" below
+
+    count = dataset_size
+    index_for_numpy_iter = 0
+    while count > 0:
+        # we can't get all data in one request, because we can have more than 400k
+        # of records in every collection, so => limit(1000)
+        limit = 1000
+        if count < 1000:
+            limit = count
+        data = list(finance_data.find({"timestamp": {"$gte": last_data_timestamp}}).sort(
+            "timestamp", -1).limit(limit))
+        count -= limit
+        # print(data)
+        last_data_timestamp = data[0]["timestamp"] + 1
+        for x in data:
+            # x is a minute of trading
+            open_price = x["open_price"]
+            close_price = x["close_price"]
+            low_price = x["low_price"]
+            high_price = x["high_price"]
+            start_date = x["timestamp"]
+
+            prices = np.array([open_price, low_price, close_price, high_price])
+            # average price of minute
+            average = np.average(prices)
+
+            local_time = datetime.fromtimestamp(start_date)
+            unix_timestamp = local_time.timestamp()
+            sec = int(local_time.strftime("%S"))
+            minute = int(local_time.strftime("%M"))
+            # we can count only active trading hours
+            hour = int(local_time.strftime("%H")) - 13
+
+            # binary classification
+            # if close price bigger than close price of last minute,
+            # then minute label is 1, else - 0
+            # if close_price - last_close > 0:
+            #     price_growth = 1
+            # elif close_price - last_close < 0:
+            #     price_growth = 0
+
+            price_growth_percent = (close_price - last_close) / last_close
+            # price growth compared to prev minute
+            # price_growth_percent = (close_price - last_close) / last_close
+            # price growth compared to prev minute  normalized????
+
+            pseudo_log_return = np.log(average / last_average)
+            log_return = np.log(close_price / last_close)
+
+            last_average = average
+            last_close = close_price
+
+            pseudo_log_return_arr[index_for_numpy_iter] = pseudo_log_return
+            # price_growth_arr.append(price_growth)
+            price_growth_percent_arr[index_for_numpy_iter] = (price_growth_percent)
+            average_price_arr[index_for_numpy_iter] = (average)
+            close_price_arr[index_for_numpy_iter] = (close_price)
+            log_return_arr[index_for_numpy_iter] = (log_return)
+            time_minute[index_for_numpy_iter] = (minute)
+            time_hour[index_for_numpy_iter] = (hour)
+            time_sec[index_for_numpy_iter] = (sec)
+            time_unix[index_for_numpy_iter] = unix_timestamp
+            std_arr[index_for_numpy_iter] = np.std(prices)
+            index_for_numpy_iter += 1
+
+    # I'm not sure that this function can remove outliers
+    # neural_data = reject_outliers(neural_data) # remove outliers
+
+    if train:
+        mean_statistics = {
+            'pseudo_log': {},
+            'log': {},
+            'average': {},
+            'close': {},
+            'std': {}
+        }
+        # according to A.Karparthy course we have to use mean statistics from train set
+        # to normalize test and validation set too
+        # find mean close,average,log, pseudo_log of train set
+        mean_statistics["close"]["mean"] = np.average(close_price_arr)
+        mean_statistics["average"]["mean"] = np.average(average_price_arr)
+        mean_statistics["pseudo_log"]["mean"] = np.average(pseudo_log_return_arr)
+        mean_statistics["log"]["mean"] = np.average(log_return_arr)
+        mean_statistics["std"]["mean"] = np.average(std_arr)
+
+        # find standart deviation of train set
+
+        mean_statistics["close"]["std"] = np.std(close_price_arr)
+        mean_statistics["average"]["std"] = np.std(average_price_arr)
+        mean_statistics["pseudo_log"]["std"] = np.std(pseudo_log_return_arr)
+        mean_statistics["log"]["std"] = np.std(log_return_arr)
+        mean_statistics["std"]["std"] = np.std(std_arr)
+
+    index_in_norm_arr = 0
+    pprint(mean_statistics)
+    for i in range(0, dataset_size):
+        # centering and / by std
+
+        # z_score = normalize_price(value, neural_train_data_mean, neural_train_data_std)
+        average_price_arr[i] = z_score(average_price_arr[i], mean_statistics["average"])
+        close_price_arr[i] = z_score(close_price_arr[i], mean_statistics["close"])
+        log_return_arr[i] = z_score(log_return_arr[i], mean_statistics["log"])
+        pseudo_log_return_arr[i] = z_score(pseudo_log_return_arr[i], mean_statistics["pseudo_log"])
+        std_arr[i] = z_score(std_arr[i], mean_statistics["std"])
+
+    
+    std_arr = min_max(std_arr)
+    average_price_arr = min_max(average_price_arr)
+    close_price_arr = min_max(close_price_arr)
+    log_return_arr = min_max(log_return_arr)
+    pseudo_log_return_arr = min_max(pseudo_log_return_arr)
+    price_growth_percent_arr = min_max(price_growth_percent_arr)
+
+    store_mongo_arr = []
+    for i in range(0, dataset_size):
+        if i == 0: # price_growth_percent is invalid for 0 element
+            continue
+
+        minute = {
+            "std": std_arr[i],
+            'sec': time_sec[i],
+            'minute': time_minute[i],
+            'hour': time_hour[i],
+            'timestamp': time_unix[i],
+            'pseudo_log_return': pseudo_log_return_arr[i],
+            'log_return': log_return_arr[i],
+            # 'price_growth': price_growth_arr[index_in_norm_arr],
+            'price_growth_percent': price_growth_percent_arr[i],
+            'close_price': close_price_arr[i],
+            'average_prices': average_price_arr[i]
+        }
+
+        store_mongo_arr.append(minute)  # insert minute in arr
+        if len(store_mongo_arr) == 1000:
+            collection.insert_many(store_mongo_arr)
+            store_mongo_arr = []
+
+    if train:
+        return mean_statistics, last_data_timestamp
+    return None
+# def reject_outliers(data, m=2):
+#     return data[abs(data - np.mean(data)) < m * np.std(data)]
