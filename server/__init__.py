@@ -15,16 +15,19 @@ from .api_v1.finance_data import Finance_Data
 from .api_v1.neural_data import Neural_Data
 # Status_Data - part of API implemented for model backtesting
 # from .api_v1.status_data import Status_Data
-from .api_v1.predict import Prediction
+from .api_v1.visualize import Visualize
+# from .api_v1.predict import Prediction
 from .api_v1.train import Train
 
 api = restful.Api(app, prefix='/api/v1')
 
 api.add_resource(Train, '/train')
-api.add_resource(Prediction, '/predict')
+# api.add_resource(Prediction, '/predict')
 # api.add_resource(Status_Data, '/status_data')
 api.add_resource(Finance_Data, '/finance_data')
 api.add_resource(Neural_Data, '/neural_data')
+api.add_resource(Visualize, '/visualize')
+
 
 # run tasks every minute
 # from .jobs.tasks import accomplish_tasks

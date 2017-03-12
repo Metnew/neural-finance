@@ -3,3 +3,6 @@ __pycache__
 venv
 data
 download_data.sh
+numerai
+csv
+docs
