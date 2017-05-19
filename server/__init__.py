@@ -13,7 +13,6 @@ mongo = PyMongo(app)
 
 from .api_v1.finance_data import Finance_Data
 from .api_v1.neural_data import Neural_Data
-# Status_Data - part of API implemented for model backtesting
 # from .api_v1.status_data import Status_Data
 from .api_v1.visualize import Visualize
 # from .api_v1.predict import Prediction

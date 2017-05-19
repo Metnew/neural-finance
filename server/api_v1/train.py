@@ -2,10 +2,11 @@ import os
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+from time import gmtime, strftime
 from pprint import pprint
 from keras.models import Sequential
 from keras.layers import Dense, LSTM, Dropout, Activation
-from keras.utils.visualize_util import plot
+from keras.utils import plot_model
 import flask_restful as restful
 from server import mongo
 import numpy as np
@@ -28,7 +29,7 @@ class Train(restful.Resource):
         #
         # get data from mongo, mongo cursor to list
         dataset_size = collection.find({}).count()
-        count = dataset_size
+        count = 10000
         while count > 0:
             # we can't get all data in one request, because we can have more than 400k
             # of records in every collection, so => limit(1000)
@@ -44,16 +45,19 @@ class Train(restful.Resource):
 
         # look at "create_rolling_window" function below
         # rolling window includes values of last ${rolling_window_size, e.g. 5}
-        rolling_window_size = 5
+        rolling_window_size = 1
         print("Start data processing!")
         # every rolling window - is input vector for network
         for i, ex in enumerate(data[10:]):
-            this_minute_price_growth = data[i]["pseudo_log_return"]
+            # std = data[i]["std"]
+            # pseudo = data[i]["pseudo_log_return"]
+            price_growth_percent_normalized = data[i]["pseudo_log_return"]
+
             arr = create_rolling_window(data, i, rolling_window_size)
-            this_minute_y = [this_minute_price_growth]
+            # this_minute_y = [pseudo, std, price_growth_percent_normalized]
+            this_minute_y = [price_growth_percent_normalized]
             Y.append(this_minute_y)
             X.append(arr)
-
 
         print("Numpy arrays are ready.")
         length = math.ceil(len(X) * 0.8)
@@ -63,13 +67,15 @@ class Train(restful.Resource):
         Y_train = np.array(Y[:length])
         Y_test = np.array(Y[length:])
 
-        epochs = 5
-        batch_size = 32
+        epochs = 1
+        batch_size = 1
         results = []
-        features_in_vector = 5 #12
-        num_features = rolling_window_size * features_in_vector
+        ts = 1
+        features_in_vector = 3 #12
+        num_features = 3
         # reshape for LSTM
-        # X_train = np.reshape(X_train, (X_train.shape[0], 1,  X_train.shape[1]))
+        X_train = np.reshape(X_train, (X_train.shape[0], 1, 3))
+        X_test = np.reshape(X_test, (X_test.shape[0], 1,  3))
 
 
         print("X SHAPE:", X_train.shape, X_train.ndim)
@@ -78,73 +84,74 @@ class Train(restful.Resource):
         print("Y SAMPLE:", Y_train[0])
 
         model = Sequential()
-        model.add(Dense(25, input_shape=(num_features,), activation="tanh"))
-        # model.add(Dense(25, activation="tanh"))
-        # model.add(LSTM(25, batch_input_shape=(batch_size, ts, num_features),
-        #                activation="tanh",
-        #                return_sequences=True,
-        #                stateful=True))
-        # model.add(LSTM(25,
-        #                activation="tanh",
-        #                return_sequences=False,
-        #                stateful=True))
-        model.add(Dense(16, activation="tanh"))
-        model.add(Dense(9, activation="tanh"))
+        # model.add(Dense(6, input_shape=(num_features,), activation="tanh"))
+
+        model.add(LSTM(3, batch_input_shape=(batch_size, ts, num_features),
+                       activation="tanh",
+                       return_sequences=True,
+                       stateful=True))
+        model.add(LSTM(3,
+                       activation="tanh",
+                       return_sequences=True,
+                       stateful=True))
+        model.add(LSTM(3,
+                       activation="tanh",
+                       return_sequences=False,
+                       stateful=True))
+        # model.add(Dense(16, activation="tanh"))
         # model.add(Dense(8, activation="tanh"))
-        # model.add(Dense(4, activation="tanh"))
+        # model.add(Dense(5, activation="tanh"))
         model.add(Dense(1, activation="linear"))
         # loss function, optimizer, metric
-        model.compile(loss='mape',
-                      metrics=["accuracy", "mse", "mae"],
-                      optimizer="sgd")
+        model.compile(loss='mse', metrics=["mae", "mape"], optimizer="adam")
         # fit the model
         print("TRAINING...")
         history = model.fit(X_train, Y_train,
                             batch_size=batch_size,
-                            nb_epoch=epochs,
+                            epochs=epochs,
                             verbose=1)
-        history = history.history
+        # history = history.history
         # Evaluate accuracy
-        scores = model.evaluate(x=X_test, y=Y_test, batch_size=batch_size)
+        # scores = model.evaluate(x=X_test, y=Y_test, batch_size=batch_size)
         # results
-        print('Test score:', scores[0])
-        print('Test accuracy:', scores[1])
-        print("HISTORY:", history)
+        # print('Test score:', scores[0])
+        # print('Test accuracy:', scores[1])
+        # print("HISTORY:", history)
+
+        tme = strftime("%Y-%m-%d %H:%M:%S", gmtime())
+
 
         # Y_test = Y_test.tolist()
-        # predicted_output = model.predict(
-            # X_train, batch_size=batch_size, verbose=1).tolist()
+        predicted_output = model.predict(X_test, batch_size=batch_size, verbose=1)
+        All = np.hstack([Y_test, predicted_output])
+        np.savetxt('results-{}.txt'.format(tme), All, delimiter=',')
+        print('PLOTTING RESULTS:')
 
-        # print('PLOTTING RESULTS:')
-        # plt.plot(Y_train[:1000], 'blue')
-        # plt.plot(predicted_output[:1000], 'red')
-        # plt.show()
-        # file_name = 'model-{}'.format(start_time)
-        # plot(model, to_file=(file_name + '.png'))
-        # model.save_weights("model" + ".h5")
-        # print("Saved model to disk")
-        # json_string = model.to_json()
-        # json_file = open(file_name + '.json', 'w')
-        # json_file.write(json_string)
-
+        plt.plot(Y_test[:100], 'blue')
+        plt.plot(predicted_output[:100], 'red')
+        plt.savefig("test-{}.png".format(tme))
+        plt.ion()
+        plt.show()
 
 def create_rolling_window(data, i, size):
     arr = []
     for inner in range(1, size + 1):
+        step = []
         std = data[i - inner]["std"]
-        close_price = data[i - inner]["close_price"]
-        average_prices = data[i - inner]["average_prices"]
-        price_growth_percent = data[i - inner]["price_growth_percent"]
+        # close_price = data[i - inner]["close_price"]
+        # average_prices = data[i - inner]["average_prices"]
+        price_growth_percent = data[i - inner]["price_growth_percent_normalized"]
         pseudo_log_return = data[i - inner]["pseudo_log_return"]
-        log_return = data[i - inner]["log_return"]
+        # log_return = data[i - inner]["log_return"]
 
-        arr.append(log_return)
+        # arr.append(log_return)
         arr.append(pseudo_log_return)
         arr.append(std)
 
-        # arr.append(average_prices)
-        arr.append(close_price)
+        # arr.append(close_price)
         arr.append(price_growth_percent)
+        # arr.append(step)
+        # arr.append(price_growth_percent)
         # arr.append(price_growth)
 
     return arr
