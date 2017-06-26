@@ -15,7 +15,7 @@ class Neural_Data(restful.Resource):
     def get(self):
 
         normalize_data_for_NN('GSPC')
-        normalize_data_for_NN('DJI')
+        normalize_data_for_NN('DJI' )
         return "DATA STORED!"
 
 

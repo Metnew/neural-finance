@@ -8,9 +8,11 @@ from keras.models import Sequential
 from keras.layers import Dense, LSTM, Dropout, Activation
 from keras.utils import plot_model
 import flask_restful as restful
+from sklearn.preprocessing import scale, MinMaxScaler, normalize, robust_scale, maxabs_scale, minmax_scale
 from server import mongo
 import numpy as np
 import math
+from sklearn.metrics import r2_score
 
 
 class Train(restful.Resource):
@@ -29,7 +31,7 @@ class Train(restful.Resource):
         #
         # get data from mongo, mongo cursor to list
         dataset_size = collection.find({}).count()
-        count = 10000
+        count = 100000
         while count > 0:
             # we can't get all data in one request, because we can have more than 400k
             # of records in every collection, so => limit(1000)
@@ -71,11 +73,11 @@ class Train(restful.Resource):
         batch_size = 1
         results = []
         ts = 1
-        features_in_vector = 3 #12
-        num_features = 3
+        features_in_vector = 2 #12
+        num_features = 2
         # reshape for LSTM
-        X_train = np.reshape(X_train, (X_train.shape[0], 1, 3))
-        X_test = np.reshape(X_test, (X_test.shape[0], 1,  3))
+        X_train = np.reshape(X_train, (X_train.shape[0], 1, 2))
+        X_test = np.reshape(X_test, (X_test.shape[0], 1,  2))
 
 
         print("X SHAPE:", X_train.shape, X_train.ndim)
@@ -90,10 +92,10 @@ class Train(restful.Resource):
                        activation="tanh",
                        return_sequences=True,
                        stateful=True))
-        model.add(LSTM(3,
-                       activation="tanh",
-                       return_sequences=True,
-                       stateful=True))
+        # model.add(LSTM(3,
+        #                activation="tanh",
+        #                return_sequences=True,
+        #                stateful=True))
         model.add(LSTM(3,
                        activation="tanh",
                        return_sequences=False,
@@ -123,13 +125,19 @@ class Train(restful.Resource):
 
         # Y_test = Y_test.tolist()
         predicted_output = model.predict(X_test, batch_size=batch_size, verbose=1)
+        print('R2 SCORE:', r2_score(Y_test, predicted_output))
+        ##########################################################
+        # Y_test_zero_to_one = sk_min_max(Y_test)
+        # predicted_output_zero_to_one = sk_min_max(predicted_output)
+        # print('R2 SCORE:', r2_score(Y_test_zero_to_one, predicted_output_zero_to_one))
+        ##########################################################
         All = np.hstack([Y_test, predicted_output])
         np.savetxt('results-{}.txt'.format(tme), All, delimiter=',')
         print('PLOTTING RESULTS:')
 
         plt.plot(Y_test[:100], 'blue')
         plt.plot(predicted_output[:100], 'red')
-        plt.savefig("test-{}.png".format(tme))
+        plt.savefig("results-{}.png".format(tme))
         plt.ion()
         plt.show()
 
@@ -140,7 +148,7 @@ def create_rolling_window(data, i, size):
         std = data[i - inner]["std"]
         # close_price = data[i - inner]["close_price"]
         # average_prices = data[i - inner]["average_prices"]
-        price_growth_percent = data[i - inner]["price_growth_percent_normalized"]
+        # price_growth_percent = data[i - inner]["price_growth_percent_normalized"]
         pseudo_log_return = data[i - inner]["pseudo_log_return"]
         # log_return = data[i - inner]["log_return"]
 
@@ -149,7 +157,7 @@ def create_rolling_window(data, i, size):
         arr.append(std)
 
         # arr.append(close_price)
-        arr.append(price_growth_percent)
+        # arr.append(price_growth_percent)
         # arr.append(step)
         # arr.append(price_growth_percent)
         # arr.append(price_growth)
@@ -158,3 +166,8 @@ def create_rolling_window(data, i, size):
 
 def toFixed(num):
     return  "{:10.2f}".format(num)
+
+def sk_min_max(X):
+    min_max_scaler = MinMaxScaler()
+    # X = scale(X, axis=0, with_mean=True, with_std=True, copy=True)
+    return min_max_scaler.fit_transform(X)

@@ -7,6 +7,7 @@ import math
 from pprint import pprint
 from sklearn.preprocessing import scale, MinMaxScaler, normalize, robust_scale, maxabs_scale, minmax_scale
 from sklearn.decomposition import PCA
+import pywt
 
 class Neural_Data(restful.Resource):
     # divide our finance collections in train, test datasets
@@ -155,7 +156,7 @@ def make_dataset(index_name):
     # I'm not sure that this function can remove outliers
     # neural_data = reject_outliers(neural_data) # remove outliers
 
-    cbs = [noop]
+    cbs = [wavy]
     price_growth_percent_scaled_arr = compose(price_growth_percent_arr, cbs)
     price_growth_percent_arr = compose(price_growth_percent_arr, cbs)
     average_price_arr = compose(average_price_arr, cbs)
@@ -244,3 +245,8 @@ def concat_timeline_value(arr, x):
     arr.append([x])
     return arr
     # return np.stack([arr, x])
+
+def wavy(arr):
+    cA, cD = pywt.dwt(arr, 'db2', mode='symmetric')
+    y = pywt.idwt(cA, cD, 'db2')
+    return y

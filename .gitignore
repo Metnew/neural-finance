@@ -6,3 +6,6 @@ download_data.sh
 numerai
 csv
 docs
+records
+pics
+results-*.txt
